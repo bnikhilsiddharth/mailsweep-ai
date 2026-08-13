@@ -1,0 +1,2361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MailSweep AI — Inbox Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --void: #080808;
+  --surface: #0E0E0E;
+  --brass: #C9A96E;
+  --brass-dim: #8B7248;
+  --paper: #F2F0EB;
+  --paper-warm: #EDE8DF;
+  --acid: #E8FF47;
+  --white: #FAFAF8;
+  --muted: #3A3A3A;
+  --text-dim: #888880;
+}
+
+html { scroll-behavior: auto; }
+
+body {
+  background: var(--void);
+  color: var(--white);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+  cursor: none;
+}
+
+/* ─── CURSOR ─── */
+#cursor {
+  position: fixed;
+  width: 8px;
+  height: 8px;
+  background: var(--brass);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s, background 0.3s, opacity 0.3s;
+  mix-blend-mode: normal;
+}
+
+#cursor-ring {
+  position: fixed;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(201,169,110,0.3);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: width 0.5s cubic-bezier(0.23,1,0.32,1), 
+              height 0.5s cubic-bezier(0.23,1,0.32,1),
+              border-color 0.3s;
+}
+
+body:has(a:hover) #cursor,
+body:has(button:hover) #cursor { width: 0; height: 0; }
+body:has(a:hover) #cursor-ring,
+body:has(button:hover) #cursor-ring { width: 56px; height: 56px; border-color: var(--brass); }
+
+/* ─── NAV ─── */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 28px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  mix-blend-mode: normal;
+}
+
+.nav-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  color: var(--white);
+  text-decoration: none;
+}
+
+.nav-logo span { color: var(--brass); }
+
+.nav-cta {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--void);
+  background: var(--brass);
+  border: none;
+  padding: 12px 28px;
+  cursor: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.nav-cta:hover { background: var(--white); }
+
+/* ─── SCENE 1: VOID HERO ─── */
+#scene-hero {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#hero-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hero-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 32px;
+  opacity: 0;
+  animation: fadeUp 1s 0.5s ease forwards;
+}
+
+.hero-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(72px, 10vw, 140px);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--white);
+  opacity: 0;
+  animation: fadeUp 1.2s 0.7s ease forwards;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--brass);
+}
+
+.hero-sub {
+  margin-top: 40px;
+  font-size: 16px;
+  font-weight: 300;
+  color: var(--text-dim);
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0;
+  animation: fadeUp 1s 1s ease forwards;
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  animation: fadeIn 1s 1.5s ease forwards;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 60px;
+  background: linear-gradient(to bottom, var(--brass), transparent);
+  animation: scrollPulse 2s ease infinite;
+}
+
+.scroll-text {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass-dim);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.3; transform: scaleY(0.8); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+/* ─── SCENE 2: THE STATEMENT ─── */
+#scene-statement {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 48px;
+  position: relative;
+}
+
+.statement-inner {
+  max-width: 900px;
+}
+
+.statement-number {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 180px;
+  font-weight: 300;
+  color: transparent;
+  -webkit-text-stroke: 1px var(--muted);
+  line-height: 1;
+  position: absolute;
+  top: 60px;
+  right: 48px;
+  user-select: none;
+  pointer-events: none;
+}
+
+.statement-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 48px;
+}
+
+.statement-text {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 5vw, 68px);
+  font-weight: 300;
+  line-height: 1.15;
+  color: var(--white);
+}
+
+.statement-text strong {
+  font-weight: 500;
+  font-style: italic;
+  color: var(--brass);
+}
+
+.statement-aside {
+  margin-top: 56px;
+  padding-left: 32px;
+  border-left: 1px solid var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  max-width: 420px;
+  font-weight: 300;
+}
+
+/* ─── SCENE 3: MAILBOX ─── */
+#scene-mailbox {
+  height: 600vh;
+  position: relative;
+}
+
+#mailbox-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#mailbox-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mailbox-text {
+  position: absolute;
+  left: 10%;
+  bottom: 15%;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.mailbox-chapter {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 16px;
+}
+
+.mailbox-headline {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(28px, 4vw, 52px);
+  font-weight: 300;
+  line-height: 1.2;
+  color: var(--white);
+  max-width: 380px;
+}
+
+/* ─── PAPER OVERLAY ─── */
+#paper-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.08);
+  width: 88vw;
+  max-width: 1100px;
+  height: auto;
+  background: linear-gradient(160deg, #F7F4EE 0%, #EDE8DF 55%, #E6DFD2 100%);
+  border-radius: 3px;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.06),
+    0 12px 32px rgba(0,0,0,0.2),
+    0 40px 80px rgba(0,0,0,0.32),
+    inset 0 1px 0 rgba(255,255,255,0.55);
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: none;
+  overflow: hidden;
+  transform-origin: center center;
+}
+
+/* Top edge brass line */
+#paper-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, transparent 5%, rgba(201,169,110,0.45) 30%, rgba(201,169,110,0.45) 70%, transparent 95%);
+}
+
+/* Subtle horizontal ruled lines across whole sheet */
+#paper-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 30px,
+    rgba(0,0,0,0.035) 30px,
+    rgba(0,0,0,0.035) 31px
+  );
+  pointer-events: none;
+}
+
+.paper-content {
+  position: relative;
+  z-index: 2;
+  padding: 44px 56px 52px;
+}
+
+/* Header row — eyebrow + title side by side */
+.paper-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 36px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(0,0,0,0.09);
+}
+
+.paper-header-left {}
+
+.paper-eyebrow {
+  font-size: 9.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #8B7248;
+  margin-bottom: 10px;
+}
+
+.paper-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #1A1410;
+  line-height: 1.15;
+}
+
+.paper-header-right {
+  font-size: 11px;
+  color: rgba(90,80,64,0.5);
+  font-weight: 300;
+  text-align: right;
+  line-height: 1.6;
+}
+
+/* 4-column grid — all cards in one row */
+.paper-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  background: rgba(0,0,0,0.07);
+}
+
+.paper-block {
+  background: rgba(247,244,238,0.97);
+  padding: 32px 28px 36px;
+  position: relative;
+  border-right: 1px solid rgba(0,0,0,0.07);
+}
+
+.paper-block:last-child {
+  border-right: none;
+}
+
+.paper-block-num {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 44px;
+  font-weight: 300;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(139,114,72,0.15);
+  line-height: 1;
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  user-select: none;
+}
+
+.paper-block-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 22px;
+}
+
+.paper-block-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 21px;
+  font-weight: 500;
+  color: #1A1410;
+  margin-bottom: 12px;
+  line-height: 1.2;
+}
+
+.paper-block-body {
+  font-size: 12px;
+  line-height: 1.75;
+  color: #5A5040;
+  font-weight: 300;
+}
+
+.paper-block-tag {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8B7248;
+  border-bottom: 1px solid rgba(139,114,72,0.35);
+  padding-bottom: 2px;
+}
+
+/* ─── SCENE 4: INTELLIGENCE ─── */
+#scene-intelligence {
+  min-height: 100vh;
+  padding: 120px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.intelligence-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+}
+
+.intel-block {
+  padding: 72px 64px;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+  transition: background 0.5s;
+}
+
+.intel-block:hover { background: #111; }
+
+.intel-block::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--muted), transparent);
+}
+
+.intel-number {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 80px;
+  font-weight: 300;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(201,169,110,0.2);
+  line-height: 1;
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  user-select: none;
+}
+
+.intel-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 40px;
+  opacity: 0.6;
+}
+
+.intel-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--white);
+  margin-bottom: 20px;
+  line-height: 1.2;
+}
+
+.intel-body {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  font-weight: 300;
+  max-width: 320px;
+}
+
+.intel-tag {
+  display: inline-block;
+  margin-top: 32px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--brass);
+  border-bottom: 1px solid var(--brass-dim);
+  padding-bottom: 2px;
+}
+
+/* Hover tilt effect */
+.intel-block { transform-style: preserve-3d; perspective: 1000px; }
+
+/* ─── SCENE 5: SCORE REVEAL ─── */
+#scene-score {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.score-bg-text {
+  position: absolute;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 40vw;
+  font-weight: 300;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255,255,255,0.02);
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.score-inner {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 700px;
+}
+
+.score-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 40px;
+}
+
+.score-display {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 48px;
+}
+
+.score-number {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(100px, 18vw, 220px);
+  font-weight: 300;
+  line-height: 1;
+  color: var(--acid);
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 80px rgba(232,255,71,0.3);
+}
+
+.score-unit {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(32px, 5vw, 64px);
+  font-weight: 300;
+  color: rgba(232,255,71,0.4);
+  align-self: flex-start;
+  margin-top: 20px;
+}
+
+.score-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(28px, 4vw, 52px);
+  font-weight: 300;
+  color: var(--white);
+  line-height: 1.2;
+  margin-bottom: 24px;
+}
+
+.score-body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  font-weight: 300;
+}
+
+/* ─── SCORE BARS ─── */
+.score-bars {
+  margin-top: 64px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 24px;
+  text-align: left;
+}
+
+.score-bar-item {}
+
+.score-bar-label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.score-bar-track {
+  height: 2px;
+  background: var(--muted);
+  position: relative;
+  overflow: visible;
+}
+
+.score-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--brass);
+  transition: width 1.5s cubic-bezier(0.16,1,0.3,1);
+  width: 0;
+}
+
+.score-bar-fill.acid { background: var(--acid); }
+
+.score-bar-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--white);
+  margin-top: 12px;
+}
+
+/* ─── SCENE 6: PROTECTION ─── */
+#scene-protection {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 120px 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+#protection-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.protection-inner {
+  position: relative;
+  z-index: 10;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.protection-left {}
+
+.protection-chapter {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 32px;
+}
+
+.protection-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(40px, 6vw, 80px);
+  font-weight: 300;
+  line-height: 1.05;
+  color: var(--white);
+  margin-bottom: 40px;
+}
+
+.protection-title em {
+  font-style: italic;
+  color: var(--brass);
+}
+
+.protection-body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  font-weight: 300;
+  max-width: 420px;
+  margin-bottom: 48px;
+}
+
+.protection-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.protection-cat {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 24px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.protection-cat::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--brass);
+  transform: scaleY(0);
+  transition: transform 0.3s;
+  transform-origin: bottom;
+}
+
+.protection-cat:hover { background: rgba(201,169,110,0.04); border-color: rgba(201,169,110,0.15); }
+.protection-cat:hover::before { transform: scaleY(1); }
+
+.cat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(201,169,110,0.08);
+  border: 1px solid rgba(201,169,110,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.cat-name {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--white);
+  flex: 1;
+}
+
+.cat-status {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+.protection-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── ORBITAL PROTECTION VIZ ─── */
+.orbital-system {
+  position: relative;
+  width: 400px;
+  height: 400px;
+}
+
+.orbital-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,169,110,0.3), rgba(201,169,110,0.05));
+  border: 1px solid rgba(201,169,110,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 60px rgba(201,169,110,0.15);
+}
+
+.orbital-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  border: 1px solid rgba(201,169,110,0.08);
+  transform: translate(-50%, -50%);
+  animation: orbitRotate linear infinite;
+}
+
+.orbital-ring:nth-child(2) { width: 160px; height: 160px; animation-duration: 8s; }
+.orbital-ring:nth-child(3) { width: 240px; height: 240px; animation-duration: 14s; animation-direction: reverse; }
+.orbital-ring:nth-child(4) { width: 320px; height: 320px; animation-duration: 20s; }
+.orbital-ring:nth-child(5) { width: 400px; height: 400px; animation-duration: 28s; animation-direction: reverse; }
+
+.orbital-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brass);
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: 0 0 12px var(--brass);
+}
+
+@keyframes orbitRotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ─── SCENE 7: CLEANUP SIMULATION ─── */
+#scene-cleanup {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 120px 48px;
+  background: var(--surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.cleanup-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.cleanup-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  margin-bottom: 80px;
+  align-items: end;
+}
+
+.cleanup-chapter {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 32px;
+}
+
+.cleanup-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(40px, 5vw, 72px);
+  font-weight: 300;
+  line-height: 1.1;
+  color: var(--white);
+}
+
+.cleanup-body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  font-weight: 300;
+  align-self: end;
+}
+
+/* ─── EMAIL DISSOLVE SIMULATION ─── */
+.email-simulation {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.email-item {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 28px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.04);
+  transition: all 0.8s cubic-bezier(0.23,1,0.32,1);
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+}
+
+.email-item.dissolving {
+  opacity: 0;
+  transform: translateX(40px) scale(0.95);
+  max-height: 0;
+  padding: 0 28px;
+  border-color: transparent;
+  margin-bottom: -2px;
+}
+
+.email-item.protected {
+  border-color: rgba(201,169,110,0.15);
+  background: rgba(201,169,110,0.04);
+}
+
+.email-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.email-dot.low { background: var(--muted); }
+.email-dot.med { background: #4A7C59; }
+.email-dot.high { background: var(--brass); }
+.email-dot.protect { background: var(--brass); box-shadow: 0 0 8px var(--brass); }
+
+.email-sender { font-size: 13px; color: var(--text-dim); width: 160px; flex-shrink: 0; }
+.email-subject { font-size: 13px; color: var(--white); flex: 1; font-weight: 300; }
+.email-size { font-size: 12px; color: var(--text-dim); font-family: 'Cormorant Garamond', serif; }
+
+.email-badge {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid;
+  flex-shrink: 0;
+}
+
+.email-badge.remove { color: var(--text-dim); border-color: var(--muted); }
+.email-badge.protected-badge { color: var(--brass); border-color: rgba(201,169,110,0.3); }
+
+.simulation-controls {
+  margin-top: 32px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.sim-btn {
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 14px 32px;
+  border: 1px solid;
+  background: transparent;
+  cursor: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.sim-btn.primary { color: var(--void); background: var(--brass); border-color: var(--brass); }
+.sim-btn.primary:hover { background: var(--white); border-color: var(--white); }
+.sim-btn.ghost { color: var(--text-dim); border-color: var(--muted); }
+.sim-btn.ghost:hover { color: var(--white); border-color: var(--white); }
+
+.sim-status {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-weight: 300;
+}
+
+.sim-status .recovered { color: var(--brass); font-family: 'Cormorant Garamond', serif; font-size: 18px; }
+
+/* ─── SCENE 8: METRICS ROW ─── */
+#scene-metrics {
+  padding: 80px 48px;
+  border-top: 1px solid var(--muted);
+  border-bottom: 1px solid var(--muted);
+}
+
+.metrics-row {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  divide-x: 1px solid var(--muted);
+}
+
+.metric-item {
+  padding: 48px 48px;
+  border-right: 1px solid var(--muted);
+  position: relative;
+}
+
+.metric-item:last-child { border-right: none; }
+
+.metric-value {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 64px;
+  font-weight: 300;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.metric-value sup {
+  font-size: 32px;
+  vertical-align: super;
+  color: var(--brass);
+}
+
+.metric-label {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 400;
+}
+
+/* ─── SCENE 9: CTA ─── */
+#scene-cta {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,169,110,0.08) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cta-inner {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  max-width: 640px;
+}
+
+.cta-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(48px, 7vw, 96px);
+  font-weight: 300;
+  line-height: 1.05;
+  color: var(--white);
+  margin-bottom: 32px;
+}
+
+.cta-title em {
+  font-style: italic;
+  color: var(--brass);
+}
+
+.cta-body {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-bottom: 56px;
+}
+
+.cta-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: center;
+}
+
+.cta-main {
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--void);
+  background: var(--white);
+  border: none;
+  padding: 18px 48px;
+  cursor: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  transition: all 0.3s;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.cta-main:hover { background: var(--brass); }
+
+.cta-note {
+  font-size: 12px;
+  color: var(--text-dim);
+  font-weight: 300;
+}
+
+/* ─── FOOTER ─── */
+footer {
+  padding: 48px;
+  border-top: 1px solid var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.footer-logo span { color: var(--brass); }
+
+.footer-note {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 300;
+}
+
+/* ─── SCROLL ANIMATIONS ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.reveal-delay-1 { transition-delay: 0.1s; }
+.reveal-delay-2 { transition-delay: 0.2s; }
+.reveal-delay-3 { transition-delay: 0.3s; }
+.reveal-delay-4 { transition-delay: 0.4s; }
+
+/* ─── PROGRESS BAR ─── */
+#progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 1px;
+  background: var(--brass);
+  z-index: 200;
+  transition: width 0.1s linear;
+  width: 0%;
+}
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<div id="progress"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">Mail<span>Sweep</span> AI</a>
+  <button class="nav-cta" onclick="handleSignIn()">Begin Analysis</button>
+</nav>
+
+<!-- SCENE 1: HERO -->
+<section id="scene-hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Inbox Intelligence System</p>
+    <h1 class="hero-title">
+      Your inbox<br>
+      <em>thinks.</em>
+    </h1>
+    <p class="hero-sub">An AI that understands your email. Not just filters it.</p>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    <span class="scroll-text">Scroll</span>
+  </div>
+</section>
+
+<!-- SCENE 2: STATEMENT -->
+<section id="scene-statement">
+  <div class="statement-number">01</div>
+  <div class="statement-inner">
+    <p class="statement-label reveal">The Problem</p>
+    <h2 class="statement-text reveal reveal-delay-1">
+      You don't have an <strong>email problem.</strong><br>
+      You have an <strong>intelligence problem.</strong>
+    </h2>
+    <p class="statement-aside reveal reveal-delay-2">
+      Every inbox management tool treats your email the same. Delete, archive, filter. None of them understand what matters. MailSweep AI does.
+    </p>
+  </div>
+</section>
+
+<!-- SCENE 3: MAILBOX + PAPER -->
+<section id="scene-mailbox">
+  <div id="mailbox-sticky">
+    <canvas id="mailbox-canvas"></canvas>
+
+    <!-- Paper overlay with feature content printed on it -->
+    <div id="paper-overlay">
+      <div class="paper-content">
+        <div class="paper-header">
+          <div class="paper-header-left">
+            <p class="paper-eyebrow">MailSweep AI — Intelligence Report</p>
+            <h2 class="paper-title">Four systems. One intelligent inbox.</h2>
+          </div>
+          <div class="paper-header-right">
+            Scroll to read<br>
+            <span style="color:rgba(139,114,72,0.7)">↓</span>
+          </div>
+        </div>
+        <div class="paper-grid">
+          <div class="paper-block">
+            <span class="paper-block-num">01</span>
+            <svg class="paper-block-icon" viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="15" stroke="#8B7248" stroke-width="1"/>
+              <path d="M9 18C9 13.05 13.05 9 18 9" stroke="#8B7248" stroke-width="1" stroke-linecap="round"/>
+              <path d="M27 18C27 22.95 22.95 27 18 27" stroke="rgba(139,114,72,0.3)" stroke-width="1" stroke-linecap="round"/>
+              <circle cx="18" cy="18" r="3" fill="rgba(139,114,72,0.4)"/>
+            </svg>
+            <h3 class="paper-block-title">Importance<br>Scoring</h3>
+            <p class="paper-block-body">Every email receives a 0–100 intelligence score. Behavioral patterns, sender history, content signals. Nothing important gets lost.</p>
+            <span class="paper-block-tag">0–100 Score</span>
+          </div>
+          <div class="paper-block">
+            <span class="paper-block-num">02</span>
+            <svg class="paper-block-icon" viewBox="0 0 36 36" fill="none">
+              <path d="M6 30L15 21L21 27L30 6" stroke="#8B7248" stroke-width="1" stroke-linecap="round"/>
+              <circle cx="30" cy="6" r="2.5" fill="#8B7248"/>
+              <path d="M6 30L30 30" stroke="rgba(139,114,72,0.2)" stroke-width="1"/>
+            </svg>
+            <h3 class="paper-block-title">Storage<br>Forecasting</h3>
+            <p class="paper-block-body">Linear regression on your growth patterns. Know exactly when your Gmail fills up — 30, 60, 90 days out. Act before crisis.</p>
+            <span class="paper-block-tag">Predictive</span>
+          </div>
+          <div class="paper-block">
+            <span class="paper-block-num">03</span>
+            <svg class="paper-block-icon" viewBox="0 0 36 36" fill="none">
+              <path d="M18 3L33 30H3L18 3Z" stroke="#8B7248" stroke-width="1"/>
+              <path d="M18 13.5V21" stroke="#8B7248" stroke-width="1" stroke-linecap="round"/>
+              <circle cx="18" cy="25.5" r="1.2" fill="#8B7248"/>
+            </svg>
+            <h3 class="paper-block-title">Protected<br>by Default</h3>
+            <p class="paper-block-body">Banking. Medical. Legal. Government. Critical emails are identified and shielded permanently. Never suggested for deletion. Ever.</p>
+            <span class="paper-block-tag">Always Safe</span>
+          </div>
+          <div class="paper-block">
+            <span class="paper-block-num">04</span>
+            <svg class="paper-block-icon" viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="12" stroke="#8B7248" stroke-width="1" stroke-dasharray="3 3"/>
+              <path d="M18 6V12M18 24V30M6 18H12M24 18H30" stroke="rgba(139,114,72,0.4)" stroke-width="1" stroke-linecap="round"/>
+              <circle cx="18" cy="18" r="4.5" fill="none" stroke="#8B7248" stroke-width="1"/>
+            </svg>
+            <h3 class="paper-block-title">30-Day<br>Rollback</h3>
+            <p class="paper-block-body">Every cleanup session is recorded. Every deletion is reversible. Restore your entire inbox state within 30 days. One click.</p>
+            <span class="paper-block-tag">Time Reversal</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mailbox-text" id="mailbox-label">
+      <p class="mailbox-chapter">The Moment</p>
+      <h2 class="mailbox-headline">Intelligence<br>revealed</h2>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 5: SCORE -->
+<section id="scene-score">
+  <div class="score-bg-text">94</div>
+  <div class="score-inner">
+    <p class="score-label reveal">Your Inbox Health</p>
+    <div class="score-display reveal reveal-delay-1">
+      <span class="score-number" id="score-counter">0</span>
+      <span class="score-unit">/100</span>
+    </div>
+    <h2 class="score-title reveal reveal-delay-2">A single number that<br>tells the whole story.</h2>
+    <p class="score-body reveal reveal-delay-3">Five weighted signals. Storage consumption. Unread ratio. Newsletter overload. Spam accumulation. Attachment bloat. One honest score.</p>
+    <div class="score-bars reveal reveal-delay-4">
+      <div class="score-bar-item">
+        <div class="score-bar-label">Storage</div>
+        <div class="score-bar-track"><div class="score-bar-fill acid" data-width="78"></div></div>
+        <div class="score-bar-value">78</div>
+      </div>
+      <div class="score-bar-item">
+        <div class="score-bar-label">Unread</div>
+        <div class="score-bar-track"><div class="score-bar-fill" data-width="91"></div></div>
+        <div class="score-bar-value">91</div>
+      </div>
+      <div class="score-bar-item">
+        <div class="score-bar-label">Newsletters</div>
+        <div class="score-bar-track"><div class="score-bar-fill" data-width="65"></div></div>
+        <div class="score-bar-value">65</div>
+      </div>
+      <div class="score-bar-item">
+        <div class="score-bar-label">Spam</div>
+        <div class="score-bar-track"><div class="score-bar-fill acid" data-width="98"></div></div>
+        <div class="score-bar-value">98</div>
+      </div>
+      <div class="score-bar-item">
+        <div class="score-bar-label">Attachments</div>
+        <div class="score-bar-track"><div class="score-bar-fill" data-width="82"></div></div>
+        <div class="score-bar-value">82</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 6: PROTECTION -->
+<section id="scene-protection">
+  <canvas id="protection-canvas"></canvas>
+  <div class="protection-inner">
+    <div class="protection-left">
+      <p class="protection-chapter reveal">Trust Architecture</p>
+      <h2 class="protection-title reveal reveal-delay-1">
+        Nothing<br><em>important</em><br>ever leaves.
+      </h2>
+      <p class="protection-body reveal reveal-delay-2">
+        Before a single recommendation is made, the protection layer scans every email for signals of value. Domains. Keywords. Headers. Behavioral patterns. Then it builds a wall.
+      </p>
+      <div class="protection-categories reveal reveal-delay-3">
+        <div class="protection-cat">
+          <div class="cat-icon">🏦</div>
+          <span class="cat-name">Banking & Finance</span>
+          <span class="cat-status">Always Protected</span>
+        </div>
+        <div class="protection-cat">
+          <div class="cat-icon">🏛</div>
+          <span class="cat-name">Government Agencies</span>
+          <span class="cat-status">Always Protected</span>
+        </div>
+        <div class="protection-cat">
+          <div class="cat-icon">⚕️</div>
+          <span class="cat-name">Medical Providers</span>
+          <span class="cat-status">Always Protected</span>
+        </div>
+        <div class="protection-cat">
+          <div class="cat-icon">⚖️</div>
+          <span class="cat-name">Legal Documents</span>
+          <span class="cat-status">Always Protected</span>
+        </div>
+      </div>
+    </div>
+    <div class="protection-right reveal reveal-delay-2">
+      <div class="orbital-system">
+        <div class="orbital-ring"><div class="orbital-dot"></div></div>
+        <div class="orbital-ring"><div class="orbital-dot"></div></div>
+        <div class="orbital-ring"><div class="orbital-dot"></div></div>
+        <div class="orbital-ring"><div class="orbital-dot"></div></div>
+        <div class="orbital-core">✉</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 7: CLEANUP SIMULATION -->
+<section id="scene-cleanup">
+  <div class="cleanup-inner">
+    <div class="cleanup-header">
+      <div>
+        <p class="cleanup-chapter reveal">Cleanup Studio</p>
+        <h2 class="cleanup-title reveal reveal-delay-1">
+          Simulate<br>before<br>you delete.
+        </h2>
+      </div>
+      <p class="cleanup-body reveal reveal-delay-2">
+        See exactly what happens before committing. Preview storage recovered, emails affected, risk level. Then decide. Protected emails never move.
+      </p>
+    </div>
+
+    <div class="email-simulation reveal" id="email-sim">
+      <div class="email-item" data-removable="true">
+        <div class="email-dot low"></div>
+        <span class="email-sender">Shopify Updates</span>
+        <span class="email-subject">Your weekly merchant digest — June 2026</span>
+        <span class="email-size">2.4 MB</span>
+        <span class="email-badge remove">Remove</span>
+      </div>
+      <div class="email-item" data-removable="true">
+        <div class="email-dot low"></div>
+        <span class="email-sender">Newsletter Daily</span>
+        <span class="email-subject">What happened in tech this week</span>
+        <span class="email-size">1.8 MB</span>
+        <span class="email-badge remove">Remove</span>
+      </div>
+      <div class="email-item protected">
+        <div class="email-dot protect"></div>
+        <span class="email-sender">Chase Bank</span>
+        <span class="email-subject">Your statement for June 2026 is ready</span>
+        <span class="email-size">380 KB</span>
+        <span class="email-badge protected-badge">Protected</span>
+      </div>
+      <div class="email-item" data-removable="true">
+        <div class="email-dot low"></div>
+        <span class="email-sender">Promotions</span>
+        <span class="email-subject">Summer sale — up to 60% off everything</span>
+        <span class="email-size">4.1 MB</span>
+        <span class="email-badge remove">Remove</span>
+      </div>
+      <div class="email-item protected">
+        <div class="email-dot protect"></div>
+        <span class="email-sender">IRS.gov</span>
+        <span class="email-subject">Tax filing confirmation — Reference #2847</span>
+        <span class="email-size">120 KB</span>
+        <span class="email-badge protected-badge">Protected</span>
+      </div>
+      <div class="email-item" data-removable="true">
+        <div class="email-dot low"></div>
+        <span class="email-sender">LinkedIn</span>
+        <span class="email-subject">3 people viewed your profile this week</span>
+        <span class="email-size">890 KB</span>
+        <span class="email-badge remove">Remove</span>
+      </div>
+      <div class="email-item" data-removable="true">
+        <div class="email-dot low"></div>
+        <span class="email-sender">Medium Digest</span>
+        <span class="email-subject">Stories we think you'll love</span>
+        <span class="email-size">1.2 MB</span>
+        <span class="email-badge remove">Remove</span>
+      </div>
+    </div>
+
+    <div class="simulation-controls reveal reveal-delay-1">
+      <button class="sim-btn primary" id="sim-clean-btn" onclick="simulateCleanup()">Run Simulation</button>
+      <button class="sim-btn ghost" id="sim-restore-btn" onclick="simulateRestore()" style="display:none">↩ Rollback</button>
+      <span class="sim-status" id="sim-status">5 emails selected · <span class="recovered" id="sim-recovered">10.4 MB</span> to recover</span>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 8: METRICS -->
+<section id="scene-metrics">
+  <div class="metrics-row">
+    <div class="metric-item reveal">
+      <div class="metric-value">15<sup>GB</sup></div>
+      <div class="metric-label">Gmail Limit</div>
+    </div>
+    <div class="metric-item reveal reveal-delay-1">
+      <div class="metric-value">2.3<sup>K</sup></div>
+      <div class="metric-label">Avg Emails / Year</div>
+    </div>
+    <div class="metric-item reveal reveal-delay-2">
+      <div class="metric-value">30<sup>D</sup></div>
+      <div class="metric-label">Rollback Window</div>
+    </div>
+    <div class="metric-item reveal reveal-delay-3">
+      <div class="metric-value">0<sup>¢</sup></div>
+      <div class="metric-label">Cost to Start</div>
+    </div>
+  </div>
+</section>
+
+<!-- SCENE 9: CTA -->
+<section id="scene-cta">
+  <div class="cta-glow"></div>
+  <div class="cta-inner">
+    <h2 class="cta-title reveal">
+      Your inbox<br>deserves<br><em>intelligence.</em>
+    </h2>
+    <p class="cta-body reveal reveal-delay-1">Connect your Gmail. Get your inbox health score in 60 seconds. No email content is stored. Revoke access anytime.</p>
+    <div class="cta-buttons reveal reveal-delay-2">
+      <button class="cta-main" onclick="handleSignIn()">Connect Gmail — Free</button>
+    </div>
+    <p class="cta-note reveal reveal-delay-3" style="margin-top: 24px">Read-only analysis · No data sold · Revoke anytime</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">Mail<span>Sweep</span> AI</span>
+  <span class="footer-note">© 2024 MailSweep AI. Your data never leaves your session.</span>
+</footer>
+
+<script>
+// ─── CURSOR ───
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+let mouseX = 0, mouseY = 0;
+let ringX = 0, ringY = 0;
+
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+  cursor.style.left = mouseX + 'px';
+  cursor.style.top = mouseY + 'px';
+});
+
+function animateCursor() {
+  ringX += (mouseX - ringX) * 0.12;
+  ringY += (mouseY - ringY) * 0.12;
+  cursorRing.style.left = ringX + 'px';
+  cursorRing.style.top = ringY + 'px';
+  requestAnimationFrame(animateCursor);
+}
+animateCursor();
+
+// ─── PROGRESS ───
+const progress = document.getElementById('progress');
+window.addEventListener('scroll', () => {
+  const pct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+  progress.style.width = pct + '%';
+});
+
+// ─── HERO CANVAS: PARTICLE NETWORK ───
+const heroCanvas = document.getElementById('hero-canvas');
+const hCtx = heroCanvas.getContext('2d');
+let particles = [];
+let hW, hH;
+
+function resizeHero() {
+  hW = heroCanvas.width = window.innerWidth;
+  hH = heroCanvas.height = window.innerHeight;
+}
+resizeHero();
+window.addEventListener('resize', resizeHero);
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * hW;
+    this.y = Math.random() * hH;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.size = Math.random() * 1.5 + 0.5;
+    this.opacity = Math.random() * 0.4 + 0.1;
+    this.life = Math.random() * 200 + 100;
+    this.age = 0;
+    this.isImportant = Math.random() < 0.08;
+    this.glowSize = this.isImportant ? Math.random() * 4 + 2 : this.size;
+  }
+  update(mx, my) {
+    this.age++;
+    // Subtle mouse repulsion
+    const dx = this.x - mx;
+    const dy = this.y - my;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 120) {
+      const force = (120 - dist) / 120 * 0.3;
+      this.vx += (dx / dist) * force;
+      this.vy += (dy / dist) * force;
+    }
+    // Damping
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.x += this.vx;
+    this.y += this.vy;
+    if (this.x < 0 || this.x > hW || this.y < 0 || this.y > hH) this.reset();
+  }
+  draw(ctx) {
+    const fadeIn = Math.min(this.age / 30, 1);
+    const alpha = this.opacity * fadeIn;
+    
+    if (this.isImportant) {
+      // Glowing important particle
+      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.glowSize * 4);
+      grad.addColorStop(0, `rgba(201,169,110,${alpha})`);
+      grad.addColorStop(1, 'rgba(201,169,110,0)');
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.glowSize * 4, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.glowSize, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,169,110,${alpha})`;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${alpha * 0.3})`;
+      ctx.fill();
+    }
+  }
+}
+
+// Connections
+function drawConnections(ctx, particles) {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 100) {
+        const alpha = (1 - dist / 100) * 0.06;
+        const color = (particles[i].isImportant || particles[j].isImportant)
+          ? `rgba(201,169,110,${alpha * 3})`
+          : `rgba(255,255,255,${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+let heroMX = hW / 2, heroMY = hH / 2;
+document.addEventListener('mousemove', e => { heroMX = e.clientX; heroMY = e.clientY; });
+
+function animateHero() {
+  hCtx.clearRect(0, 0, hW, hH);
+  drawConnections(hCtx, particles);
+  particles.forEach(p => {
+    p.update(heroMX, heroMY);
+    p.draw(hCtx);
+  });
+  requestAnimationFrame(animateHero);
+}
+animateHero();
+
+// ─── MAILBOX CANVAS ───
+const mbCanvas = document.getElementById('mailbox-canvas');
+const mbCtx = mbCanvas.getContext('2d');
+let mbW, mbH;
+
+function resizeMailbox() {
+  mbW = mbCanvas.width = window.innerWidth;
+  mbH = mbCanvas.height = window.innerHeight;
+}
+resizeMailbox();
+window.addEventListener('resize', resizeMailbox);
+
+function getMailboxProgress() {
+  const section = document.getElementById('scene-mailbox');
+  const rect = section.getBoundingClientRect();
+  const total = section.offsetHeight - window.innerHeight;
+  const scrolled = -rect.top;
+  return Math.max(0, Math.min(1, scrolled / total));
+}
+
+// ease helper
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+function easeInOut(t) { return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2; }
+
+function drawMailbox(progress) {
+  // Only draw mailbox during phase 0–0.5 of scroll
+  // Phase 0.0–0.16: mailbox appears, rotates
+  // Phase 0.16–0.32: door opens
+  // Phase 0.32–0.50: letter slides out partially
+  // Phase 0.50–0.70: letter grows into paper overlay (DOM takes over)
+  // Phase 0.70–1.00: paper slides up and off
+
+  mbCtx.clearRect(0, 0, mbW, mbH);
+  const cx = mbW / 2;
+  const cy = mbH / 2 + 40;
+
+  // Mailbox fades out after letter fully emerges
+  const mbAlpha = progress < 0.45 ? 1 : Math.max(0, 1 - (progress - 0.45) / 0.1);
+
+  if (mbAlpha <= 0) return;
+
+  mbCtx.globalAlpha = mbAlpha;
+
+  // Background glow
+  const bgGlow = mbCtx.createRadialGradient(cx, cy, 0, cx, cy, 500);
+  bgGlow.addColorStop(0, `rgba(201,169,110,${0.04 + progress * 0.04})`);
+  bgGlow.addColorStop(1, 'transparent');
+  mbCtx.fillStyle = bgGlow;
+  mbCtx.fillRect(0, 0, mbW, mbH);
+
+  const entryP = Math.min(1, progress / 0.12);
+  const scale = easeOut(entryP) * 0.22 + 0.78;
+  const rotation = (progress * 8 - 4) * Math.PI / 180;
+
+  mbCtx.save();
+  mbCtx.translate(cx, cy);
+  mbCtx.rotate(rotation);
+  mbCtx.scale(scale, scale);
+
+  const bw = 280, bh = 190;
+
+  // ── POLE / POST ──
+  // Tapered post with shadow
+  mbCtx.save();
+  const postGrad = mbCtx.createLinearGradient(-6, bh/2, 6, bh/2);
+  postGrad.addColorStop(0, '#3A2E1E');
+  postGrad.addColorStop(0.3, '#2A2010');
+  postGrad.addColorStop(0.7, '#1E1808');
+  postGrad.addColorStop(1, '#2A2010');
+  mbCtx.fillStyle = postGrad;
+  mbCtx.shadowColor = 'rgba(0,0,0,0.5)';
+  mbCtx.shadowBlur = 12;
+  mbCtx.shadowOffsetX = 3;
+  // Post body
+  mbCtx.beginPath();
+  mbCtx.moveTo(-5, bh/2);
+  mbCtx.lineTo(-3, bh/2 + 160);
+  mbCtx.lineTo(3, bh/2 + 160);
+  mbCtx.lineTo(5, bh/2);
+  mbCtx.closePath();
+  mbCtx.fill();
+  // Post base plate
+  mbCtx.shadowBlur = 0;
+  const basePlateGrad = mbCtx.createLinearGradient(-18, bh/2+155, 18, bh/2+165);
+  basePlateGrad.addColorStop(0, '#3A2E1E');
+  basePlateGrad.addColorStop(1, '#1A1408');
+  mbCtx.fillStyle = basePlateGrad;
+  mbCtx.beginPath();
+  mbCtx.roundRect(-18, bh/2 + 155, 36, 10, 3);
+  mbCtx.fill();
+  mbCtx.strokeStyle = 'rgba(201,169,110,0.25)';
+  mbCtx.lineWidth = 0.5;
+  mbCtx.beginPath();
+  mbCtx.roundRect(-18, bh/2 + 155, 36, 10, 3);
+  mbCtx.stroke();
+  // Post ring collar
+  mbCtx.fillStyle = '#C9A96E';
+  mbCtx.beginPath();
+  mbCtx.roundRect(-7, bh/2 + 8, 14, 5, 2);
+  mbCtx.fill();
+  mbCtx.restore();
+
+  // ── MAILBOX BODY ──
+  mbCtx.shadowColor = 'rgba(0,0,0,0.5)';
+  mbCtx.shadowBlur = 40;
+  mbCtx.shadowOffsetX = 6;
+  mbCtx.shadowOffsetY = 12;
+
+  // Main body — dark lacquered finish
+  const bodyGrad = mbCtx.createLinearGradient(-bw/2, -bh/2, bw/2, bh/2);
+  bodyGrad.addColorStop(0, '#2E2416');
+  bodyGrad.addColorStop(0.2, '#1E1810');
+  bodyGrad.addColorStop(0.5, '#151208');
+  bodyGrad.addColorStop(0.8, '#1A1508');
+  bodyGrad.addColorStop(1, '#0E0C06');
+  mbCtx.fillStyle = bodyGrad;
+  mbCtx.beginPath();
+  // Rounded top, flat bottom on sides — classic mailbox shape
+  mbCtx.moveTo(-bw/2 + 16, -bh/2);
+  mbCtx.arcTo(bw/2, -bh/2, bw/2, bh/2, 14);
+  mbCtx.arcTo(bw/2, bh/2, -bw/2, bh/2, 6);
+  mbCtx.arcTo(-bw/2, bh/2, -bw/2, -bh/2, 6);
+  mbCtx.arcTo(-bw/2, -bh/2, bw/2, -bh/2, 14);
+  mbCtx.closePath();
+  mbCtx.fill();
+
+  // Specular highlight — top left rim
+  mbCtx.shadowColor = 'transparent';
+  const rimGrad = mbCtx.createLinearGradient(-bw/2, -bh/2, -bw/2 + 60, -bh/2 + 30);
+  rimGrad.addColorStop(0, 'rgba(255,255,255,0.06)');
+  rimGrad.addColorStop(1, 'transparent');
+  mbCtx.fillStyle = rimGrad;
+  mbCtx.beginPath();
+  mbCtx.moveTo(-bw/2 + 16, -bh/2);
+  mbCtx.arcTo(bw/2, -bh/2, bw/2, bh/2, 14);
+  mbCtx.arcTo(bw/2, bh/2, -bw/2, bh/2, 6);
+  mbCtx.arcTo(-bw/2, bh/2, -bw/2, -bh/2, 6);
+  mbCtx.arcTo(-bw/2, -bh/2, bw/2, -bh/2, 14);
+  mbCtx.closePath();
+  mbCtx.fill();
+
+  // Brass outer edge
+  mbCtx.strokeStyle = 'rgba(201,169,110,0.55)';
+  mbCtx.lineWidth = 1.2;
+  mbCtx.beginPath();
+  mbCtx.moveTo(-bw/2 + 16, -bh/2);
+  mbCtx.arcTo(bw/2, -bh/2, bw/2, bh/2, 14);
+  mbCtx.arcTo(bw/2, bh/2, -bw/2, bh/2, 6);
+  mbCtx.arcTo(-bw/2, bh/2, -bw/2, -bh/2, 6);
+  mbCtx.arcTo(-bw/2, -bh/2, bw/2, -bh/2, 14);
+  mbCtx.closePath();
+  mbCtx.stroke();
+
+  // Inner recessed panel
+  mbCtx.fillStyle = 'rgba(0,0,0,0.25)';
+  mbCtx.beginPath();
+  mbCtx.roundRect(-bw/2 + 16, -bh/2 + 14, bw - 32, bh - 28, 6);
+  mbCtx.fill();
+  mbCtx.strokeStyle = 'rgba(201,169,110,0.15)';
+  mbCtx.lineWidth = 0.6;
+  mbCtx.beginPath();
+  mbCtx.roundRect(-bw/2 + 16, -bh/2 + 14, bw - 32, bh - 28, 6);
+  mbCtx.stroke();
+
+  // ── DOOR HINGE LINE (horizontal divider) ──
+  mbCtx.strokeStyle = 'rgba(201,169,110,0.35)';
+  mbCtx.lineWidth = 1;
+  mbCtx.beginPath();
+  mbCtx.moveTo(-bw/2 + 8, 10);
+  mbCtx.lineTo(bw/2 - 8, 10);
+  mbCtx.stroke();
+
+  // Hinge bolts
+  for (let hx of [-bw/2 + 22, bw/2 - 22]) {
+    mbCtx.fillStyle = '#C9A96E';
+    mbCtx.beginPath();
+    mbCtx.arc(hx, 10, 3.5, 0, Math.PI * 2);
+    mbCtx.fill();
+    mbCtx.strokeStyle = 'rgba(0,0,0,0.3)';
+    mbCtx.lineWidth = 0.5;
+    mbCtx.beginPath();
+    mbCtx.arc(hx, 10, 3.5, 0, Math.PI * 2);
+    mbCtx.stroke();
+    // Screw cross
+    mbCtx.strokeStyle = 'rgba(0,0,0,0.4)';
+    mbCtx.lineWidth = 0.8;
+    mbCtx.beginPath();
+    mbCtx.moveTo(hx - 2, 10); mbCtx.lineTo(hx + 2, 10);
+    mbCtx.moveTo(hx, 8); mbCtx.lineTo(hx, 12);
+    mbCtx.stroke();
+  }
+
+  // ── MAIL SLOT ──
+  // Recessed slot with depth
+  mbCtx.fillStyle = 'rgba(0,0,0,0.7)';
+  mbCtx.beginPath();
+  mbCtx.roundRect(-52, -8, 104, 12, 3);
+  mbCtx.fill();
+  // Slot brass surround
+  mbCtx.strokeStyle = 'rgba(201,169,110,0.5)';
+  mbCtx.lineWidth = 1;
+  mbCtx.beginPath();
+  mbCtx.roundRect(-52, -8, 104, 12, 3);
+  mbCtx.stroke();
+  // Slot inner shadow line
+  mbCtx.strokeStyle = 'rgba(255,255,255,0.04)';
+  mbCtx.lineWidth = 0.5;
+  mbCtx.beginPath();
+  mbCtx.moveTo(-50, -7); mbCtx.lineTo(50, -7);
+  mbCtx.stroke();
+  // MAIL text above slot
+  mbCtx.fillStyle = 'rgba(201,169,110,0.4)';
+  mbCtx.font = '600 7px Inter, sans-serif';
+  mbCtx.letterSpacing = '0.15em';
+  mbCtx.textAlign = 'center';
+  mbCtx.fillText('MAIL', 0, -13);
+
+  // ── DOOR (lower half) ──
+  const doorProgress = progress < 0.16 ? 0 : Math.min(1, (progress - 0.16) / 0.16);
+  const doorEased = easeInOut(doorProgress);
+  const doorOpenAngle = doorEased * 75 * Math.PI / 180;
+
+  mbCtx.save();
+  mbCtx.translate(0, bh/2 - 4);
+
+  const doorH = bh/2 - 18;
+  const perspY = Math.cos(doorOpenAngle) * doorH;
+  const perspAlpha = 1 - doorEased * 0.25;
+
+  // Door panel
+  const doorGrad = mbCtx.createLinearGradient(0, -doorH, 0, 0);
+  doorGrad.addColorStop(0, `rgba(28,22,12,${perspAlpha})`);
+  doorGrad.addColorStop(1, `rgba(18,14,6,${perspAlpha})`);
+  mbCtx.fillStyle = doorGrad;
+  mbCtx.beginPath();
+  mbCtx.moveTo(-bw/2 + 18, 0);
+  mbCtx.lineTo(bw/2 - 18, 0);
+  mbCtx.lineTo(bw/2 - 18, -perspY);
+  mbCtx.lineTo(-bw/2 + 18, -perspY);
+  mbCtx.closePath();
+  mbCtx.fill();
+
+  // Door edge brass
+  mbCtx.strokeStyle = `rgba(201,169,110,${0.35 * perspAlpha})`;
+  mbCtx.lineWidth = 0.8;
+  mbCtx.beginPath();
+  mbCtx.moveTo(-bw/2 + 18, 0);
+  mbCtx.lineTo(bw/2 - 18, 0);
+  mbCtx.lineTo(bw/2 - 18, -perspY);
+  mbCtx.lineTo(-bw/2 + 18, -perspY);
+  mbCtx.closePath();
+  mbCtx.stroke();
+
+  // Door handle — brass knob
+  if (perspAlpha > 0.1) {
+    const knobY = -perspY * 0.5;
+    // Knob shadow
+    mbCtx.shadowColor = 'rgba(0,0,0,0.4)';
+    mbCtx.shadowBlur = 8;
+    mbCtx.shadowOffsetX = 1; mbCtx.shadowOffsetY = 2;
+    const knobGrad = mbCtx.createRadialGradient(-2, knobY - 3, 1, 0, knobY, 9);
+    knobGrad.addColorStop(0, '#E0C070');
+    knobGrad.addColorStop(0.4, '#C9A96E');
+    knobGrad.addColorStop(1, '#8B6830');
+    mbCtx.fillStyle = knobGrad;
+    mbCtx.beginPath();
+    mbCtx.arc(0, knobY, 9, 0, Math.PI * 2);
+    mbCtx.fill();
+    mbCtx.shadowBlur = 0; mbCtx.shadowOffsetX = 0; mbCtx.shadowOffsetY = 0;
+    // Keyhole
+    mbCtx.fillStyle = 'rgba(0,0,0,0.5)';
+    mbCtx.beginPath();
+    mbCtx.arc(0, knobY, 3, 0, Math.PI * 2);
+    mbCtx.fill();
+    mbCtx.beginPath();
+    mbCtx.moveTo(-2, knobY + 3);
+    mbCtx.lineTo(2, knobY + 3);
+    mbCtx.lineTo(1.5, knobY + 7);
+    mbCtx.lineTo(-1.5, knobY + 7);
+    mbCtx.closePath();
+    mbCtx.fill();
+  }
+
+  // Inner darkness when door opens
+  if (doorProgress > 0.2) {
+    const innerAlpha = Math.min(1, (doorProgress - 0.2) / 0.3) * 0.85;
+    const innerGrad = mbCtx.createLinearGradient(-bw/2 + 18, -doorH, -bw/2 + 18, 0);
+    innerGrad.addColorStop(0, `rgba(4,3,1,${innerAlpha})`);
+    innerGrad.addColorStop(1, `rgba(8,6,2,${innerAlpha * 0.6})`);
+    mbCtx.fillStyle = innerGrad;
+    mbCtx.beginPath();
+    mbCtx.moveTo(-bw/2 + 18, 0);
+    mbCtx.lineTo(bw/2 - 18, 0);
+    mbCtx.lineTo(bw/2 - 18, -doorH - 2);
+    mbCtx.lineTo(-bw/2 + 18, -doorH - 2);
+    mbCtx.closePath();
+    mbCtx.fill();
+  }
+
+  mbCtx.restore();
+
+  // ── ADDRESS PLATE ──
+  const plateAlpha = Math.min(1, (1 - progress * 4) + 0.4);
+  if (plateAlpha > 0) {
+    mbCtx.globalAlpha = mbAlpha * Math.max(0, plateAlpha);
+    mbCtx.fillStyle = 'rgba(201,169,110,0.12)';
+    mbCtx.beginPath();
+    mbCtx.roundRect(-45, bh/2 - 36, 90, 20, 3);
+    mbCtx.fill();
+    mbCtx.strokeStyle = 'rgba(201,169,110,0.3)';
+    mbCtx.lineWidth = 0.5;
+    mbCtx.beginPath();
+    mbCtx.roundRect(-45, bh/2 - 36, 90, 20, 3);
+    mbCtx.stroke();
+    mbCtx.fillStyle = 'rgba(201,169,110,0.5)';
+    mbCtx.font = '500 7px Inter, sans-serif';
+    mbCtx.textAlign = 'center';
+    mbCtx.fillText('MAILSWEEP AI · 001', 0, bh/2 - 22);
+    mbCtx.globalAlpha = mbAlpha;
+  }
+
+  // ── CORNER BOLTS ──
+  const boltPositions = [
+    [-bw/2 + 12, -bh/2 + 12],
+    [bw/2 - 12, -bh/2 + 12],
+    [-bw/2 + 12, bh/2 - 12],
+    [bw/2 - 12, bh/2 - 12],
+  ];
+  boltPositions.forEach(([bx, by]) => {
+    const bg = mbCtx.createRadialGradient(bx-1, by-1, 0.5, bx, by, 4);
+    bg.addColorStop(0, '#D4B478');
+    bg.addColorStop(1, '#8B6830');
+    mbCtx.fillStyle = bg;
+    mbCtx.beginPath();
+    mbCtx.arc(bx, by, 4, 0, Math.PI * 2);
+    mbCtx.fill();
+    mbCtx.strokeStyle = 'rgba(0,0,0,0.3)';
+    mbCtx.lineWidth = 0.5;
+    mbCtx.beginPath();
+    mbCtx.arc(bx, by, 4, 0, Math.PI * 2);
+    mbCtx.stroke();
+    // Bolt cross
+    mbCtx.strokeStyle = 'rgba(0,0,0,0.35)';
+    mbCtx.lineWidth = 0.8;
+    mbCtx.beginPath();
+    mbCtx.moveTo(bx - 2.5, by); mbCtx.lineTo(bx + 2.5, by);
+    mbCtx.moveTo(bx, by - 2.5); mbCtx.lineTo(bx, by + 2.5);
+    mbCtx.stroke();
+  });
+
+  // ── FLAG ──
+  const flagProgress = Math.min(1, progress / 0.08);
+  mbCtx.save();
+  mbCtx.translate(bw/2 - 2, -bh/4);
+  // Flag pole
+  const flagPoleGrad = mbCtx.createLinearGradient(-2, -40, 2, 0);
+  flagPoleGrad.addColorStop(0, '#C9A96E');
+  flagPoleGrad.addColorStop(1, '#8B6830');
+  mbCtx.fillStyle = flagPoleGrad;
+  mbCtx.fillRect(-1.5, -40, 3, 40);
+  // Flag panel
+  mbCtx.fillStyle = `rgba(201,169,110,${0.7 + flagProgress * 0.3})`;
+  mbCtx.beginPath();
+  mbCtx.moveTo(0, -38);
+  mbCtx.lineTo(22, -30);
+  mbCtx.lineTo(0, -22);
+  mbCtx.closePath();
+  mbCtx.fill();
+  mbCtx.restore();
+
+  // ── LETTER EMERGING (canvas portion — until DOM overlay takes over) ──
+  const letterStart = 0.32;
+  if (progress > letterStart) {
+    const rawLetterP = Math.min(1, (progress - letterStart) / 0.18);
+    const letterP = easeOut(rawLetterP);
+    // Letter rises out of slot
+    const letterY = -bh/2 + 4 - letterP * 110;
+    const letterTilt = (rawLetterP - 0.5) * 5 * Math.PI / 180;
+    const lw = 100, lh = 140;
+
+    mbCtx.save();
+    mbCtx.translate(0, letterY);
+    mbCtx.rotate(letterTilt);
+
+    // Paper shadow
+    mbCtx.shadowColor = 'rgba(0,0,0,0.5)';
+    mbCtx.shadowBlur = 24;
+    mbCtx.shadowOffsetX = 5;
+    mbCtx.shadowOffsetY = 10;
+
+    // Paper body
+    const paperGrad = mbCtx.createLinearGradient(-lw/2, -lh/2, lw/2, lh/2);
+    paperGrad.addColorStop(0, '#F5F2EC');
+    paperGrad.addColorStop(0.5, '#EDE8DF');
+    paperGrad.addColorStop(1, '#E5DFD2');
+    mbCtx.fillStyle = paperGrad;
+    mbCtx.beginPath();
+    mbCtx.roundRect(-lw/2, -lh/2, lw, lh, 3);
+    mbCtx.fill();
+
+    mbCtx.shadowColor = 'transparent';
+
+    // Horizontal lines
+    mbCtx.strokeStyle = 'rgba(0,0,0,0.05)';
+    mbCtx.lineWidth = 0.6;
+    for (let i = 0; i < 9; i++) {
+      const lineY = -lh/2 + 20 + i * 14;
+      mbCtx.beginPath();
+      mbCtx.moveTo(-lw/2 + 10, lineY);
+      mbCtx.lineTo(lw/2 - 10, lineY);
+      mbCtx.stroke();
+    }
+
+    // Fold crease
+    mbCtx.strokeStyle = 'rgba(0,0,0,0.07)';
+    mbCtx.lineWidth = 0.8;
+    mbCtx.beginPath();
+    mbCtx.moveTo(-lw/2 + 2, 0);
+    mbCtx.lineTo(lw/2 - 2, 0);
+    mbCtx.stroke();
+
+    // Left margin rule
+    mbCtx.strokeStyle = 'rgba(201,169,110,0.2)';
+    mbCtx.lineWidth = 0.5;
+    mbCtx.beginPath();
+    mbCtx.moveTo(-lw/2 + 20, -lh/2 + 10);
+    mbCtx.lineTo(-lw/2 + 20, lh/2 - 10);
+    mbCtx.stroke();
+
+    // Paper edge highlight
+    mbCtx.strokeStyle = 'rgba(255,255,255,0.6)';
+    mbCtx.lineWidth = 0.5;
+    mbCtx.beginPath();
+    mbCtx.moveTo(-lw/2 + 1, -lh/2 + 3);
+    mbCtx.lineTo(-lw/2 + 1, lh/2 - 3);
+    mbCtx.stroke();
+
+    mbCtx.restore();
+  }
+
+  mbCtx.restore();
+  mbCtx.globalAlpha = 1;
+}
+
+// ── PAPER DOM OVERLAY LOGIC ──
+const paperOverlay = document.getElementById('paper-overlay');
+const mailboxLabel = document.getElementById('mailbox-label');
+
+function updatePaperOverlay(progress) {
+  // Phase 0.48–0.62: paper DOM fades in and scales up from small to full
+  // Phase 0.62–0.78: paper fully visible, user reads
+  // Phase 0.78–1.00: paper slides upward and off screen
+
+  if (progress < 0.44) {
+    paperOverlay.style.opacity = '0';
+    paperOverlay.style.transform = 'translate(-50%, -50%) scale(0.08)';
+    paperOverlay.style.pointerEvents = 'none';
+    mailboxLabel.style.opacity = '1';
+    return;
+  }
+
+  if (progress >= 0.44 && progress < 0.62) {
+    // Paper scales up from tiny (matching canvas letter) to full size
+    const p = (progress - 0.44) / 0.18;
+    const eased = easeOut(p);
+    const scale = 0.08 + eased * 0.92;   // 0.08 → 1.0
+    const translateY = -50 + eased * 50;  // slight upward float into center
+    const opacity = Math.min(1, p * 3);
+
+    paperOverlay.style.opacity = opacity;
+    paperOverlay.style.transform = `translate(-50%, calc(-50% + ${translateY}px)) scale(${scale})`;
+    paperOverlay.style.pointerEvents = 'none';
+    mailboxLabel.style.opacity = Math.max(0, 1 - p * 4).toString();
+    return;
+  }
+
+  if (progress >= 0.62 && progress < 0.78) {
+    // Fully open — user reads the content
+    paperOverlay.style.opacity = '1';
+    paperOverlay.style.transform = 'translate(-50%, -50%) scale(1)';
+    paperOverlay.style.pointerEvents = 'auto';
+    mailboxLabel.style.opacity = '0';
+    return;
+  }
+
+  if (progress >= 0.78) {
+    // Slide up and out, background returns to dark
+    const p = (progress - 0.78) / 0.22;
+    const eased = easeInOut(p);
+    const translateY = -eased * 110;
+    const opacity = Math.max(0, 1 - eased * 1.6);
+
+    paperOverlay.style.opacity = opacity;
+    paperOverlay.style.transform = `translate(-50%, calc(-50% + ${translateY}px)) scale(1)`;
+    paperOverlay.style.pointerEvents = 'none';
+    mailboxLabel.style.opacity = '0';
+  }
+}
+
+function animateMailbox() {
+  const p = getMailboxProgress();
+  drawMailbox(p);
+  updatePaperOverlay(p);
+  requestAnimationFrame(animateMailbox);
+}
+animateMailbox();
+
+// ─── PROTECTION CANVAS: FIELD LINES ───
+const protCanvas = document.getElementById('protection-canvas');
+const protCtx = protCanvas.getContext('2d');
+
+function resizeProt() {
+  protCanvas.width = window.innerWidth;
+  protCanvas.height = document.getElementById('scene-protection').offsetHeight;
+}
+resizeProt();
+
+let protTime = 0;
+function animateProtection() {
+  protCtx.clearRect(0, 0, protCanvas.width, protCanvas.height);
+  protTime += 0.005;
+  
+  const cx = protCanvas.width * 0.75;
+  const cy = protCanvas.height * 0.5;
+  
+  // Flowing field lines
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 + protTime;
+    const r1 = 80, r2 = 240;
+    const x1 = cx + Math.cos(angle) * r1;
+    const y1 = cy + Math.sin(angle) * r1;
+    const x2 = cx + Math.cos(angle + 0.3) * r2;
+    const y2 = cy + Math.sin(angle + 0.3) * r2;
+    
+    const grad = protCtx.createLinearGradient(x1, y1, x2, y2);
+    grad.addColorStop(0, 'rgba(201,169,110,0.15)');
+    grad.addColorStop(1, 'transparent');
+    protCtx.strokeStyle = grad;
+    protCtx.lineWidth = 0.5;
+    protCtx.beginPath();
+    protCtx.moveTo(x1, y1);
+    protCtx.quadraticCurveTo(
+      cx + Math.cos(angle + 0.15) * (r1 + r2) / 2 + 30, 
+      cy + Math.sin(angle + 0.15) * (r1 + r2) / 2, 
+      x2, y2
+    );
+    protCtx.stroke();
+  }
+  
+  requestAnimationFrame(animateProtection);
+}
+animateProtection();
+
+// ─── INTEL BLOCK TILT ───
+document.querySelectorAll('.intel-block').forEach(block => {
+  block.addEventListener('mousemove', e => {
+    const rect = block.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    block.style.transform = `perspective(800px) rotateX(${-y * 6}deg) rotateY(${x * 6}deg)`;
+  });
+  block.addEventListener('mouseleave', () => {
+    block.style.transform = 'perspective(800px) rotateX(0) rotateY(0)';
+    block.style.transition = 'transform 0.5s ease';
+  });
+  block.addEventListener('mouseenter', () => {
+    block.style.transition = 'none';
+  });
+});
+
+// ─── SCROLL REVEALS ───
+const reveals = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      
+      // Score counter animation
+      if (entry.target.closest('#scene-score')) {
+        animateScoreBars();
+        animateCounter();
+      }
+    }
+  });
+}, { threshold: 0.1 });
+
+reveals.forEach(el => observer.observe(el));
+
+// ─── SCORE COUNTER ───
+let counterAnimated = false;
+function animateCounter() {
+  if (counterAnimated) return;
+  counterAnimated = true;
+  const el = document.getElementById('score-counter');
+  let start = 0;
+  const end = 94;
+  const duration = 2000;
+  const startTime = performance.now();
+  
+  function update(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(start + (end - start) * eased);
+    if (progress < 1) requestAnimationFrame(update);
+  }
+  requestAnimationFrame(update);
+}
+
+// ─── SCORE BARS ───
+let barsAnimated = false;
+function animateScoreBars() {
+  if (barsAnimated) return;
+  barsAnimated = true;
+  document.querySelectorAll('.score-bar-fill').forEach((bar, i) => {
+    setTimeout(() => {
+      bar.style.width = bar.dataset.width + '%';
+    }, i * 150);
+  });
+}
+
+// ─── CLEANUP SIMULATION ───
+let cleaned = false;
+
+function simulateCleanup() {
+  if (cleaned) return;
+  cleaned = true;
+  const items = document.querySelectorAll('.email-item[data-removable="true"]');
+  let delay = 0;
+  
+  items.forEach(item => {
+    setTimeout(() => {
+      item.classList.add('dissolving');
+    }, delay);
+    delay += 150;
+  });
+
+  setTimeout(() => {
+    document.getElementById('sim-status').innerHTML = 
+      'Cleaned · <span class="recovered">10.4 MB</span> recovered · Protected emails untouched';
+    document.getElementById('sim-clean-btn').style.display = 'none';
+    document.getElementById('sim-restore-btn').style.display = 'inline-block';
+  }, delay + 200);
+}
+
+function simulateRestore() {
+  cleaned = false;
+  const items = document.querySelectorAll('.email-item.dissolving');
+  items.forEach((item, i) => {
+    setTimeout(() => {
+      item.classList.remove('dissolving');
+    }, i * 100);
+  });
+  
+  setTimeout(() => {
+    document.getElementById('sim-status').innerHTML = 
+      '5 emails restored · <span class="recovered">10.4 MB</span> returned';
+    document.getElementById('sim-clean-btn').style.display = 'inline-block';
+    document.getElementById('sim-restore-btn').style.display = 'none';
+    
+    setTimeout(() => {
+      document.getElementById('sim-status').innerHTML = 
+        '5 emails selected · <span class="recovered">10.4 MB</span> to recover';
+    }, 2000);
+  }, items.length * 100 + 200);
+}
+
+// ─── SIGN IN ───
+async function handleSignIn() {
+  try {
+    const res = await fetch('http://localhost:5000/api/auth/google');
+    const data = await res.json();
+    if (data.authUrl) window.location.href = data.authUrl;
+  } catch(e) {
+    alert('Could not connect to backend. Make sure the server is running on port 5000.');
+  }
+}
+</script>
+</body>
+</html>
