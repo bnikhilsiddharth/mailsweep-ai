@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    { "source": "/health", "destination": "/api/index" },
+    { "source": "/api/auth/:path*", "destination": "/api/index" },
+    { "source": "/api/analysis/:path*", "destination": "/api/index" },
+    { "source": "/api/cleanup/:path*", "destination": "/api/index" },
+    { "source": "/api/subscriptions/:path*", "destination": "/api/index" },
+    { "source": "/api/rules/:path*", "destination": "/api/index" },
+    { "source": "/api/insights/:path*", "destination": "/api/index" },
+    { "source": "/api/settings/:path*", "destination": "/api/index" }
+  ],
+  "crons": [
+    { "path": "/api/cron/weekly-reports", "schedule": "0 9 * * 0" },
+    { "path": "/api/cron/storage-snapshots", "schedule": "0 */6 * * *" }
+  ]
+}
